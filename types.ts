@@ -1,6 +1,24 @@
 
-export type ProjectType = 'component' | 'ui' | 'website';
+export type ProjectType = 'component' | 'ui' | 'website' | 'graphics';
 export type Platform = 'mobile' | 'desktop';
+
+export interface TweakDefinition {
+  id: string;
+  label: string;
+  type: 'slider' | 'color';
+  min?: number;
+  max?: number;
+  step?: number;
+  value: string | number;
+  property: string; // The CSS variable name
+}
+
+export interface SelectedElement {
+  selector: string;
+  tagName: string;
+  styles: Record<string, string>;
+  rect: DOMRect;
+}
 
 export interface GeneratedInteraction {
   id: string;
@@ -9,6 +27,7 @@ export interface GeneratedInteraction {
   html: string;
   css: string;
   js: string;
+  tweaks?: TweakDefinition[];
   timestamp: number;
   variationOf?: string;
   hasImage?: boolean;
@@ -21,6 +40,7 @@ export interface GenerationResponse {
   html: string;
   css: string;
   js: string;
+  tweaks?: TweakDefinition[];
 }
 
 export interface ImageAttachment {

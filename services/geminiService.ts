@@ -12,18 +12,36 @@ const GENERATION_SCHEMA = {
     },
     html: {
       type: Type.STRING,
-      description: "Semantic HTML. For websites, include sections. For UI, include the app shell.",
+      description: "Semantic HTML. For websites, include sections. For UI, include the app shell. Use unique IDs or classes for specific elements to allow targeted refinement.",
     },
     css: {
       type: Type.STRING,
-      description: "Standard CSS for secondary styling. Note: Tailwind IS available via CDN in the output environment, so you can use Tailwind classes in HTML OR custom CSS here.",
+      description: "Standard CSS for secondary styling. Note: Tailwind IS available. Use CSS variables for values you want to be 'tweakable' (e.g., --bg-color, --spacing, --corner-radius).",
     },
     js: {
       type: Type.STRING,
       description: "ES Modules JavaScript. Use GSAP for complex animations if needed.",
     },
+    tweaks: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          id: { type: Type.STRING },
+          label: { type: Type.STRING, description: "Display name (e.g., 'Glow Intensity')" },
+          type: { type: Type.STRING, enum: ["slider", "color"] },
+          min: { type: Type.NUMBER },
+          max: { type: Type.NUMBER },
+          step: { type: Type.NUMBER },
+          value: { type: Type.STRING, description: "Default value (e.g., '12' for slider, '#ff0000' for color)" },
+          property: { type: Type.STRING, description: "The exact CSS variable name used in the CSS block (e.g., '--glow-size')" },
+        },
+        required: ["id", "label", "type", "value", "property"],
+      },
+      description: "A list of magic UI sliders and color pickers for this specific component.",
+    },
   },
-  required: ["name", "html", "css", "js"],
+  required: ["name", "html", "css", "js", "tweaks"],
 };
 
 export const generateInteraction = async (
@@ -38,7 +56,8 @@ export const generateInteraction = async (
   const typeContext = {
     'component': 'an isolated, reusable high-fidelity micro-interaction component.',
     'ui': `a functional ${platform} application interface. ${platform === 'mobile' ? 'Design for a 390x844 viewport (iPhone size).' : 'Design for a desktop browser 1280x800 viewport.'}`,
-    'website': 'a multi-section, responsive professional website landing page.'
+    'website': 'a multi-section, responsive professional website landing page.',
+    'graphics': 'an interactive, high-fidelity SVG or Canvas-based graphic/visualization. Focus on motion, data-art, or illustrative interfaces.'
   }[projectType];
 
   const systemInstruction = `
@@ -54,6 +73,7 @@ export const generateInteraction = async (
        - If ProjectType is "ui" (mobile): Include a status bar, bottom navigation, and mobile-specific patterns.
        - If ProjectType is "ui" (desktop): Include a sidebar or top navigation, and complex dashboard patterns.
        - If ProjectType is "website": Include a hero section, features, testimonials, and a footer.
+       - If ProjectType is "graphics": Focus on SVG paths, creative math-based visuals, or data visualizations. Ensure it is interactive (e.g., hover effects, drags, or clicks).
   `;
 
   const userText = context 

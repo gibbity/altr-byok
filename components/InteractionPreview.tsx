@@ -1,17 +1,52 @@
 
-import React, { useMemo } from 'react';
-import { GeneratedInteraction } from '../types';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { GeneratedInteraction, SelectedElement } from '../types';
 
 interface InteractionPreviewProps {
   interaction: GeneratedInteraction;
+  onElementSelected?: (element: SelectedElement | null) => void;
+  activeTweaks?: Record<string, string | number>;
+  editable?: boolean;
 }
 
-const InteractionPreview: React.FC<InteractionPreviewProps> = ({ interaction }) => {
+const InteractionPreview: React.FC<InteractionPreviewProps> = ({ 
+  interaction, 
+  onElementSelected,
+  activeTweaks = {},
+  editable = false
+}) => {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const isMobile = interaction.projectType === 'ui' && interaction.platform === 'mobile';
   const isDesktop = interaction.projectType === 'ui' && interaction.platform === 'desktop';
   const isWebsite = interaction.projectType === 'website';
 
-  const srcDoc = useMemo(() => `
+  // Apply tweaks to the iframe without reloading
+  useEffect(() => {
+    if (iframeRef.current?.contentWindow) {
+      const win = iframeRef.current.contentWindow;
+      Object.entries(activeTweaks).forEach(([prop, val]) => {
+        win.document.documentElement.style.setProperty(prop, String(val));
+      });
+    }
+  }, [activeTweaks]);
+
+  // Handle messages from the iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'ELEMENT_SELECTED' && onElementSelected) {
+        onElementSelected(event.data.element);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onElementSelected]);
+
+  const srcDoc = useMemo(() => {
+    const tweakStyles = Object.entries(activeTweaks)
+      .map(([prop, val]) => `${prop}: ${val};`)
+      .join('\n');
+
+    return `
     <!DOCTYPE html>
     <html lang="en">
       <head>
@@ -27,6 +62,9 @@ const InteractionPreview: React.FC<InteractionPreviewProps> = ({ interaction }) 
         }
         </script>
         <style>
+          :root {
+            ${tweakStyles}
+          }
           * { box-sizing: border-box; }
           html, body { 
             margin: 0; 
@@ -46,6 +84,20 @@ const InteractionPreview: React.FC<InteractionPreviewProps> = ({ interaction }) 
             ${(isMobile || isDesktop || isWebsite) ? 'display: block;' : 'display: flex; align-items: center; justify-content: center;'}
           }
 
+          /* Luminal Selection Highlighting */
+          ${editable ? `
+          .luminal-hover {
+            outline: 2px solid #6366f1 !important;
+            outline-offset: -2px !important;
+            cursor: pointer !important;
+          }
+          .luminal-selected {
+            outline: 2px dashed #ec4899 !important;
+            outline-offset: -2px !important;
+            box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.1) !important;
+          }
+          ` : ''}
+
           ${interaction.css}
         </style>
       </head>
@@ -55,10 +107,73 @@ const InteractionPreview: React.FC<InteractionPreviewProps> = ({ interaction }) 
         </div>
         <script type="module">
           ${interaction.js}
+
+          ${editable ? `
+          const root = document.getElementById('interaction-root');
+          let currentSelected = null;
+
+          function getSelector(el) {
+            if (el.id) return '#' + el.id;
+            if (el.className) {
+              const classes = Array.from(el.classList)
+                .filter(c => !c.startsWith('luminal-'))
+                .join('.');
+              if (classes) return el.tagName.toLowerCase() + '.' + classes;
+            }
+            return el.tagName.toLowerCase();
+          }
+
+          root.addEventListener('mouseover', (e) => {
+            if (e.target === root) return;
+            e.target.classList.add('luminal-hover');
+          });
+
+          root.addEventListener('mouseout', (e) => {
+            e.target.classList.remove('luminal-hover');
+          });
+
+          root.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (currentSelected) currentSelected.classList.remove('luminal-selected');
+            
+            currentSelected = e.target;
+            currentSelected.classList.add('luminal-selected');
+
+            const styles = window.getComputedStyle(currentSelected);
+            const rect = currentSelected.getBoundingClientRect();
+
+            window.parent.postMessage({ 
+              type: 'ELEMENT_SELECTED', 
+              element: {
+                selector: getSelector(currentSelected),
+                tagName: currentSelected.tagName,
+                styles: {
+                  backgroundColor: styles.backgroundColor,
+                  color: styles.color,
+                  fontSize: styles.fontSize,
+                  fontFamily: styles.fontFamily,
+                  padding: styles.padding,
+                  margin: styles.margin,
+                  borderRadius: styles.borderRadius,
+                  borderColor: styles.borderColor
+                },
+                rect: {
+                  top: rect.top,
+                  left: rect.left,
+                  width: rect.width,
+                  height: rect.height
+                }
+              } 
+            }, '*');
+          });
+          ` : ''}
         </script>
       </body>
     </html>
-  `, [interaction.id, interaction.html, interaction.css, interaction.js, interaction.projectType, interaction.platform]);
+  `;
+  }, [interaction.id, interaction.html, interaction.css, interaction.js, interaction.projectType, interaction.platform, activeTweaks, editable]);
 
   const containerStyles = useMemo(() => {
     if (isMobile) {
@@ -82,6 +197,7 @@ const InteractionPreview: React.FC<InteractionPreviewProps> = ({ interaction }) 
           </div>
         )}
         <iframe
+          ref={iframeRef}
           key={interaction.id}
           srcDoc={srcDoc}
           title="Interaction Preview"

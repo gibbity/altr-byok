@@ -54,7 +54,7 @@ export const generateInteraction = async (
   const ai = getAI();
   
   const typeContext = {
-    'component': 'an isolated, reusable high-fidelity micro-interaction component.',
+    'component': 'an isolated, reusable high-fidelity micro-interaction component. FOCUS PURELY ON THE COMPONENT ITSELF. DO NOT add page shells, headers, or navigation systems. Center the component in the viewport.',
     'ui': `a functional ${platform} application interface. ${platform === 'mobile' ? 'Design for a 390x844 viewport (iPhone size).' : 'Design for a desktop browser 1280x800 viewport.'}`,
     'website': 'a multi-section, responsive professional website landing page.',
     'graphics': 'an interactive, high-fidelity SVG or Canvas-based graphic/visualization. Focus on motion, data-art, or illustrative interfaces.'
@@ -74,6 +74,7 @@ export const generateInteraction = async (
        - If ProjectType is "ui" (desktop): Include a sidebar or top navigation, and complex dashboard patterns.
        - If ProjectType is "website": Include a hero section, features, testimonials, and a footer.
        - If ProjectType is "graphics": Focus on SVG paths, creative math-based visuals, or data visualizations. Ensure it is interactive (e.g., hover effects, drags, or clicks).
+    8. ISOLATION: For "component" type, avoid adding context like dashboards or page wrappers. Build just the specific micro-interaction (e.g., a custom switch, a hover-reveal card, or a unique button) and ensure it is the center of attention.
   `;
 
   const userText = context 

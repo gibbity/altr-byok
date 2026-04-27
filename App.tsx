@@ -64,7 +64,7 @@ const App: React.FC = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
   const [variationBarOpen, setVariationBarOpen] = useState(true);
   const [inspectorTab, setInspectorTab] = useState<'tweaks' | 'design' | 'comments'>('tweaks');
   const [attachedImage, setAttachedImage] = useState<ImageAttachment | null>(null);
@@ -90,6 +90,13 @@ const App: React.FC = () => {
     }
     setSelectedElement(null);
   }, [activeId, activeInteraction]);
+
+  useEffect(() => {
+    if (selectedElement) {
+      setInspectorOpen(true);
+      setInspectorTab('tweaks');
+    }
+  }, [selectedElement]);
 
   const handleTweakChange = (property: string, value: string | number) => {
     setActiveTweaks(prev => ({ ...prev, [property]: value }));
@@ -553,6 +560,17 @@ const App: React.FC = () => {
                 >
                   <CodeIcon size={14} />
                   Code
+                </button>
+                <div className="w-[1px] h-4 bg-[#1e1e1e]" />
+                <button
+                  onClick={() => setInspectorOpen(!inspectorOpen)}
+                  className={cn(
+                    "p-1.5 rounded-xl transition-all",
+                    inspectorOpen ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-gray-400 hover:text-white bg-[#151515] border border-[#222]"
+                  )}
+                  title="Toggle Inspector"
+                >
+                  <Settings2 size={16} />
                 </button>
               </div>
             )}
